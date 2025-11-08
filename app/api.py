@@ -1,0 +1,46 @@
+from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlmodel import Session
+from typing import List
+from .crud import create_book, get_books, get_book, update_book, delete_book
+from .schemas import BookCreate, BookRead, BookUpdate, BookSearchResults
+from .database import get_session
+
+
+router = APIRouter()
+
+
+
+@router.post("/books/", response_model=BookRead)
+def create(book: BookCreate, session: Session = Depends(get_session)):
+    return create_book(session, book)
+
+
+
+@router.get("/books/", response_model=List[BookRead])
+def read_all(offset: int = 0, limit: int = Query(default=20, le=100), session: Session = Depends(get_session)):
+    return get_books(session, offset, limit)
+
+
+@router.get("/books/{book_id}", response_model=BookRead)
+def read(book_id: int, session: Session = Depends(get_session)):
+    book = get_book(session, book_id)
+    if not book:
+        raise HTTPException(status_code=404, detail="Book not found")
+    return book
+
+
+@router.put("/books/{book_id}", response_model=BookRead)
+def update(book_id: int, book_data: BookUpdate, session: Session = Depends(get_session)):
+    book = update_book(session, book_id, book_data)
+    if not book:
+        raise  HTTPException(status_code=404, detail="Book Not Found!")
+    
+    return book
+
+@router.delete("/books/{book_id}")
+def delete(book_id: int, session = Depends(get_session)):
+    if not delete_book(session, book_id):
+        raise HTTPException(status_code=404, detail="Book Not Found!")
+    return {
+        "message":"Book deleted successfully"
+    }

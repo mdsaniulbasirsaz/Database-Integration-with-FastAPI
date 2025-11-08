@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FastAPI CRUD</title>
+    <!-- Load TailwindCSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Configure TailwindCSS to use Inter font -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                },
+            },
+        }
+    </script>
+    <style>
+        /* Simple spinner for loading state */
+        .spinner {
+            border: 4px solid rgba(0, 0, 0, .1);
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border-left-color: #09f;
+            animation: spin 1s ease infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 font-sans text-gray-900">
+
+    <!-- Main Container -->
+    <div class="container max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
+
+        <!-- Page Header -->
+        <header class="mb-8">
+            <h1 class="text-3xl font-bold text-gray-800">FastAPI CRUD</h1>
+            <p class="text-gray-600 mt-1">Add, edit, and manage your book inventory.</p>
+        </header>
+
+        <!-- Message Area for success/error feedback -->
+        <div id="message-area" class="mb-4 text-sm rounded-md p-3" role="alert"></div>
+
+        <!-- Create Book Form -->
+        <div class="bg-white p-6 rounded-lg shadow-md mb-8">
+            <h2 class="text-xl font-semibold mb-4">Add a New Book</h2>
+            <!-- Updated form fields to match BookCreate schema -->
+            <form id="create-book-form" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label for="create-title" class="block text-sm font-medium text-gray-700">Title</label>
+                    <input type="text" id="create-title" name="title" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                </div>
+                <div>
+                    <label for="create-author" class="block text-sm font-medium text-gray-700">Author</label>
+                    <input type="text" id="create-author" name="author" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                </div>
+                <div>
+                    <label for="create-year" class="block text-sm font-medium text-gray-700">Year</label>
+                    <input type="number" id="create-year" name="year" required placeholder="e.g., 2023" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                </div>
+                <div>
+                    <label for="create-price" class="block text-sm font-medium text-gray-700">Price ($)</label>
+                    <input type="number" id="create-price" name="price" step="0.01" min="0" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                </div>
+                <div class="md:col-span-2">
+                    <label for="create-description" class="block text-sm font-medium text-gray-700">Description</label>
+                    <textarea id="create-description" name="description" rows="3" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"></textarea>
+                </div>
+                <div class="md:col-span-2 flex justify-between items-center">
+                    <div class="flex items-center">
+                        <input id="create-in_stock" name="in_stock" type="checkbox" checked class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                        <label for="create-in_stock" class="ml-2 block text-sm text-gray-900">In Stock</label>
+                    </div>
+                    <button type="submit" class="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                        Add Book
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Book List Table -->
+        <div>
+            <h2 class="text-xl font-semibold mb-4">Current Book</h2>
+            <!-- Loading Spinner -->
+            <div id="loading-spinner" class="spinner mx-auto my-8 hidden"></div>
+            
+            <div class="shadow-md rounded-lg overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200 bg-white">
+                    <thead class="bg-gray-50">
+                        <!-- Updated table headers -->
+                        <tr>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Title</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Author</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Year</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Stock Status</th>
+                            <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="books-table-body" class="divide-y divide-gray-200">
+                        <!-- Book rows will be inserted here by JavaScript -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Update Book Modal -->
+    <div id="update-modal" class="fixed z-50 inset-0 overflow-y-auto hidden">
+        <div class="flex items-center justify-center min-h-screen p-4 text-center">
+            
+            <!-- Modal Overlay -->
+            <div id="modal-overlay" class="fixed inset-0 bg-gray-900 bg-opacity-75 transition-opacity" aria-hidden="true"></div>
+
+            <!-- Modal Content -->
+            <div class="relative bg-white rounded-lg shadow-xl transform transition-all sm:max-w-lg sm:w-full p-6 text-left">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-xl font-semibold text-gray-900">Edit Book</h3>
+                    <button id="close-modal-btn" type="button" class="text-gray-400 hover:text-gray-600">
+                        <span class="sr-only">Close</span>
+                        <!-- Close Icon -->
+                        <svg class="h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+                
+                <!-- Updated modal form fields to match BookUpdate schema -->
+                <form id="update-book-form">
+                    <input type="hidden" id="update-book-id" name="id">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label for="update-title" class="block text-sm font-medium text-gray-700">Title</label>
+                            <input type="text" id="update-title" name="title" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                        </div>
+                        <div>
+                            <label for="update-author" class="block text-sm font-medium text-gray-700">Author</label>
+                            <input type="text" id="update-author" name="author" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                        </div>
+                        <div>
+                            <label for="update-year" class="block text-sm font-medium text-gray-700">Year</label>
+                            <input type="number" id="update-year" name="year" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                        </div>
+                        <div>
+                            <label for="update-price" class="block text-sm font-medium text-gray-700">Price ($)</label>
+                            <input type="number" id="update-price" name="price" step="0.01" min="0" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                        </div>
+                        <div class="sm:col-span-2">
+                            <label for="update-description" class="block text-sm font-medium text-gray-700">Description</label>
+                            <textarea id="update-description" name="description" rows="3" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"></textarea>
+                        </div>
+                    </div>
+                    <div class="mt-6 flex justify-between items-center">
+                         <div class="flex items-center">
+                            <input id="update-in_stock" name="in_stock" type="checkbox" class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                            <label for="update-in_stock" class="ml-2 block text-sm text-gray-900">In Stock</label>
+                        </div>
+                        <button type="submit" class="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                            Save Changes
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+
+            const API_URL = 'http://127.0.0.1:8000/api/v1/books/'; 
+
+            // --- DOM Elements ---
+            const createForm = document.getElementById('create-book-form');
+            const booksTableBody = document.getElementById('books-table-body');
+            const updateModal = document.getElementById('update-modal');
+            const updateForm = document.getElementById('update-book-form');
+            const closeModalBtn = document.getElementById('close-modal-btn');
+            const modalOverlay = document.getElementById('modal-overlay');
+            const updateBookIdInput = document.getElementById('update-book-id');
+            const loadingSpinner = document.getElementById('loading-spinner');
+            const messageArea = document.getElementById('message-area');
+
+            // --- Helper Functions ---
+
+            /**
+             * Shows a feedback message to the user.
+             * @param {string} message - The message to display.
+             * @param {boolean} [isError=false] - Whether the message is an error.
+             */
+            function showMessage(message, isError = false) {
+                messageArea.textContent = message;
+                messageArea.className = 'mb-4 text-sm rounded-md p-3'; // Reset classes
+                if (isError) {
+                    messageArea.classList.add('bg-red-100', 'text-red-700');
+                } else {
+                    messageArea.classList.add('bg-green-100', 'text-green-700');
+                }
+                // Automatically hide the message after 5 seconds
+                setTimeout(() => {
+                    messageArea.textContent = '';
+                    messageArea.className = 'mb-4 text-sm rounded-md p-3';
+                }, 5000);
+            }
+
+            /** Shows the loading spinner */
+            function showLoading() {
+                loadingSpinner.classList.remove('hidden');
+            }
+
+            /** Hides the loading spinner */
+            function hideLoading() {
+                loadingSpinner.classList.add('hidden');
+            }
+
+            /**
+             * Returns an SVG icon based on stock status.
+             * @param {boolean} in_stock - The stock status.
+             * @returns {string} - HTML string for the status badge.
+             */
+            function renderStockStatus(in_stock) {
+                if (in_stock) {
+                    return `
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                            <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                            In Stock
+                        </span>
+                    `;
+                } else {
+                    return `
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                            <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                            Out of Stock
+                        </span>
+                    `;
+                }
+            }
+
+            /**
+             * Renders a single book row in the table.
+             * @param {object} book - The book object (from BookRead schema).
+             */
+            function renderBookRow(book) {
+                const row = document.createElement('tr');
+                row.className = 'hover:bg-gray-50';
+                // Updated innerHTML to match new table structure
+                row.innerHTML = `
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${book.title}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${book.author}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${book.year}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">$${book.price.toFixed(2)}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${renderStockStatus(book.in_stock)}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
+                        <button class="edit-btn p-1 text-yellow-600 hover:text-yellow-800" data-id="${book.id}">
+                            <!-- Edit Icon -->
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.536L16.732 3.732z"></path></svg>
+                        </button>
+                        <button class="delete-btn p-1 text-red-600 hover:text-red-800" data-id="${book.id}">
+                            <!-- Delete Icon -->
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                        </button>
+                    </td>
+                `;
+                booksTableBody.appendChild(row);
+            }
+
+            // --- API Functions ---
+
+            /**
+             * Fetches all books and renders them in the table.
+             */
+            async function fetchBooks() {
+                showLoading();
+                booksTableBody.innerHTML = ''; // Clear existing table
+                try {
+                    const response = await fetch(API_URL);
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    const books = await response.json();
+                    
+                    if (books.length === 0) {
+                        booksTableBody.innerHTML = '<tr><td colspan="6" class="px-6 py-4 text-center text-gray-500">No books found.</td></tr>';
+                    } else {
+                        books.forEach(renderBookRow);
+                    }
+                } catch (error) {
+                    console.error('Error fetching books:', error);
+                    showMessage('Failed to fetch books. Please try again.', true);
+                    booksTableBody.innerHTML = '<tr><td colspan="6" class="px-6 py-4 text-center text-red-500">Error loading books.</td></tr>';
+                } finally {
+                    hideLoading();
+                }
+            }
+
+            /**
+             * Handles the create book form submission.
+             * @param {Event} event - The form submit event.
+             */
+            async function createBook(event) {
+                event.preventDefault();
+                const formData = new FormData(createForm);
+                // Updated bookData to match BookCreate schema
+                const bookData = {
+                    title: formData.get('title'),
+                    author: formData.get('author'),
+                    year: parseInt(formData.get('year'), 10),
+                    price: parseFloat(formData.get('price')),
+                    in_stock: document.getElementById('create-in_stock').checked,
+                    description: formData.get('description'),
+                };
+
+                try {
+                    const response = await fetch(API_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(bookData),
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    
+                    showMessage('Book created successfully!', false);
+                    createForm.reset();
+                    // Set checkbox back to default
+                    document.getElementById('create-in_stock').checked = true;
+                    await fetchBooks(); // Refresh the table
+                } catch (error) {
+                    console.error('Error creating book:', error);
+                    showMessage('Failed to create book.', true);
+                }
+            }
+
+            /**
+             * Deletes a book by its ID.
+             * @param {string} bookId - The ID of the book to delete.
+             */
+            async function deleteBook(bookId) {
+                // In a real app, you'd show a confirmation modal here.
+                // confirm() is blocked, so we proceed directly.
+                try {
+                    const response = await fetch(`${API_URL}${bookId}`, {
+                        method: 'DELETE',
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    
+                    showMessage('Book deleted successfully!', false);
+                    await fetchBooks(); // Refresh the table
+                } catch (error) {
+                    console.error('Error deleting book:', error);
+                    showMessage('Failed to delete book.', true);
+                }
+            }
+
+            /**
+             * Fetches book details and opens the update modal.
+             * @param {string} bookId - The ID of the book to edit.
+             */
+            async function openUpdateModal(bookId) {
+                try {
+                    const response = await fetch(`${API_URL}${bookId}`);
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    const book = await response.json();
+
+                    // Populate the update form with new fields
+                    updateForm.elements['id'].value = book.id;
+                    updateForm.elements['title'].value = book.title;
+                    updateForm.elements['author'].value = book.author;
+                    updateForm.elements['year'].value = book.year;
+                    updateForm.elements['price'].value = book.price;
+                    updateForm.elements['description'].value = book.description;
+                    updateForm.elements['in_stock'].checked = book.in_stock;
+                    
+                    // Show the modal
+                    updateModal.classList.remove('hidden');
+                } catch (error)
+                 {
+                    console.error('Error fetching book details:', error);
+                    showMessage('Failed to fetch book details.', true);
+                }
+            }
+
+            /** Closes the update modal */
+            function closeUpdateModal() {
+                updateModal.classList.add('hidden');
+                updateForm.reset();
+            }
+
+            /**
+             * Handles the update book form submission.
+             * @param {Event} event - The form submit event.
+             */
+            async function updateBook(event) {
+                event.preventDefault();
+                const bookId = updateBookIdInput.value;
+                const formData = new FormData(updateForm);
+                // Updated bookData to match BookUpdate schema
+                const bookData = {
+                    title: formData.get('title'),
+                    author: formData.get('author'),
+                    year: parseInt(formData.get('year'), 10),
+                    price: parseFloat(formData.get('price')),
+                    in_stock: document.getElementById('update-in_stock').checked,
+                    description: formData.get('description'),
+                };
+
+                try {
+                    const response = await fetch(`${API_URL}${bookId}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(bookData),
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    
+                    showMessage('Book updated successfully!', false);
+                    closeUpdateModal();
+                    await fetchBooks(); // Refresh the table
+                } catch (error) {
+                    console.error('Error updating book:', error);
+                    showMessage('Failed to update book.', true);
+                }
+            }
+
+            // --- Event Listeners ---
+
+            // Load initial data
+            fetchBooks();
+
+            // Handle create form
+            createForm.addEventListener('submit', createBook);
+
+            // Handle update form
+            updateForm.addEventListener('submit', updateBook);
+
+            // Handle modal close
+            closeModalBtn.addEventListener('click', closeUpdateModal);
+            modalOverlay.addEventListener('click', closeUpdateModal);
+
+            // Event delegation for edit/delete buttons in the table
+            booksTableBody.addEventListener('click', (event) => {
+                const editButton = event.target.closest('.edit-btn');
+                const deleteButton = event.target.closest('.delete-btn');
+
+                if (editButton) {
+                    const bookId = editButton.dataset.id;
+                    openUpdateModal(bookId);
+                }
+
+                if (deleteButton) {
+                    const bookId = deleteButton.dataset.id;
+                    deleteBook(bookId);
+                }
+            });
+
+        });
+    </script>
+</body>
+</html>
